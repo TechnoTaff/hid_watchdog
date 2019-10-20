@@ -7,6 +7,9 @@ python:
   - 3.6
   - 3.5
 
+before_install:
+  - sudo apt-get install -y libhidapi-hidraw0
+
 # Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install: pip install -U tox-travis
 
