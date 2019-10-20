@@ -4,6 +4,8 @@ This is a simple service to communicate with cheap USB WatchDog timers that crea
 
 ![USB HID "v5" Watchdog Timer](docs/usb-hid-watchdog-v5.jpg)
 
+Please use with caution as it's not well tested!
+
 ## Install
 
 ### Installation on Ubuntu
