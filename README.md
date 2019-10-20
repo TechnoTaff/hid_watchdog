@@ -16,7 +16,7 @@ $ pip install -r requirements.txt
 
 You will need to install a library on your operating system to interface with the USB-HID device:
 
-````
+```
 apt install libhidapi-hidraw0
 ```
 
