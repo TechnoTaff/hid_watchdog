@@ -17,3 +17,4 @@ deploy:
     tags: true
     repo: technotaff/hid_watchdog
     python: 3.7
+
