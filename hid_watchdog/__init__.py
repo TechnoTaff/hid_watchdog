@@ -4,6 +4,6 @@
 
 __author__ = """Steve Randall"""
 __email__ = 'steve@mylastname.cc'
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 import hid_watchdog.hid_watchdog
