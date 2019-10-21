@@ -15,6 +15,6 @@ deploy:
     secure: Dlu6t1DTkpeafoFBQQ72k7STZRcvtSqgJrH7YWml1lx2dTnRys7PApk0nA5eMr7exnwNgoo5UP2NsZweP2GvtJFhk+G9rpo5DmXIG1G0FS6aG006rQOyDaJp0ijmDpo/42lbwr+ymKw+vZ5E7XmAPamVG4CQhMJS3rJbI6gIeQr//gdqBsu3/cMjg9BVMFPLak4Scx5QyQF4SuXhzg8K4CQ9iqG4kI225u5Co/x0EroB8bjl8poMR8OPRYIriTTwPEWqbGgmWD7p55NZrShLFCshKgetU1N4bogqK/KlGfxWTvmVfEAz/36jd46Q6PtQ046k6hhX/isLUwNnIudGNIGS8DR3Hq6qKqLf7hwPsVAkXajvXIl52RNms11VzUn4VpNdlZaOrqpKlOTO8aQ8TXVmlTZUFOLHbUqtGU9+EK56pZuKZpIOEyLsCX7OsGu5FXTd494LYEsTRMdJidYqUuE7gYQzlAVb/LE/4X0Bh0p/Wq6mHn5gyomWM9kgDg6XYoFe+Jmx3QZaAL/DwHY0ZEKqBRqBYxFecNWTaJO7XvmO0LVwWhRK0oD7uWDkWwFKuLA2QXDNlPeJW/6UOXLem8N3so6vatqZHbNN7UybxedLmimSR+vzOb4eYMOpm9T+eFZGhM6Pju83bt5a0KytLH/QrRZFLjZvhkeyD2/wjjE=
   on:
     tags: true
-    repo: technotaff/hid_watchdog
+    repo: TechnoTaff/hid_watchdog
     python: 3.7
 
