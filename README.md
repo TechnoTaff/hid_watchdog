@@ -23,3 +23,11 @@ apt install libhidapi-hidraw0
 ```
 
 Alternatively you may be able to use "libhidapi-libusb0" but I didn't have any success with this.
+
+### Installation on CentOS
+
+Same as for Ubuntu, except for last step
+
+```
+yum install hidapi
+```
