@@ -4,6 +4,7 @@
 from ctypes import create_string_buffer
 import logging
 import hid
+import binascii
 
 class WatchDog:
     def __init__(self, wd_product_id=22352, wd_vendor_id=1155, timeout=160):
@@ -28,14 +29,21 @@ class WatchDog:
             logging.info(f'Watchdog set to {timeout} seconds.')
 
     def sendStatus(self):
+        if not self.watchdog_device:
+            logging.warning("Watchdog device not available. Cannot send status.")
+            return
         logging.debug('Sending \'Server Alive\' Packet to Watchdog timer')
         self.watchdog_device.write(self.bytebits)
         logging.debug('Reading Status Packet from Watchdog')
         outbuff = self.watchdog_device.read(2, timeout=2000)
         if len(outbuff) == 0:
-            print('Could not read from Watchdog')
-        #print(binascii.hexlify(bytearray(self.watchdog_device.read(2,timeout=2000))))
+            logging.error('Could not read from Watchdog')
+        else:
+            logging.debug(f"Watchdog response: {binascii.hexlify(bytearray(outbuff))}")
 
     def close(self):
+        if not self.watchdog_device:
+            logging.debug("Watchdog device not available. Nothing to close.")
+            return
         logging.warning('Closing Watchdog device')
         self.watchdog_device.close()

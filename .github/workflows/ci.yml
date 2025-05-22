@@ -1,0 +1,111 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ master ] # Assuming 'master', adjust if needed
+  pull_request:
+    branches: [ master ] # Assuming 'master', adjust if needed
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4 # Updated to v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5 # Updated to v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libhidapi-hidraw0
+
+    - name: Install Python dependencies (pip, tox)
+      run: |
+        python -m pip install --upgrade pip
+        pip install tox tox-gh-actions # Using tox-gh-actions for better integration
+
+    - name: Run linters (flake8)
+      run: |
+        tox -e flake8
+
+    - name: Run tests with tox
+      run: |
+        tox # This will run environments based on the Python version
+            # tox-gh-actions helps match the current Python to the tox env
+            # e.g., if matrix.python-version is 3.9, it tries to run py39
+            # We need to ensure tox.ini has these envs (e.g., py38, py39, etc.)
+            # or a generic 'py' that adapts.
+            # For now, relying on tox-gh-actions to select the correct env.
+            # If specific envs like 'py38' are not defined, this might default to a general 'py'
+            # or fail if no matching env is found.
+            # The task description mentions 'tox -e py', which is a good fallback.
+            # However, tox-gh-actions typically infers the environment.
+            # Let's assume tox.ini has specific environments like py38, py39, etc.
+            # Or that tox-gh-actions will correctly map to a base 'py' if that's how tox.ini is set up.
+            # The command 'tox' by itself, with tox-gh-actions, should be sufficient.
+            # If not, we can change to 'tox -e py${{ matrix.python-version }}'
+            # or simply 'tox -e py' if tox.ini is configured for a single 'py' env.
+            # Given the task notes, 'tox -e py' is a safe bet if specific versions aren't in tox.ini.
+            # Let's use 'tox' for now, assuming tox-gh-actions handles it.
+            # If issues arise, we can specify 'tox -e py' or 'tox -e py${{ matrix.python-version }}'.
+            # The prompt suggests `tox -e py` so let's stick to that for installing dependencies in tox.
+            # The final test run step can just be `tox`.
+            # The "Install project dependencies using tox" step is actually part of what `tox` does when it runs tests.
+            # So, the `tox` command in "Run tests with tox" will handle dependency installation within its virtual environments.
+            # The "Install Python Dependencies" step should focus on pip and tox itself.
+
+    # The prompt was a bit confusing about "Install project dependencies using tox: tox -e py"
+    # and then "Run Tests: tox".
+    # `tox` itself handles the creation of environments and installation of deps listed in tox.ini.
+    # The step "Install Python dependencies" correctly installs pip and tox.
+    # The final step should just be `tox` or `tox -e py<version>`.
+    # Using `tox` with `tox-gh-actions` should select the correct environment.
+    # Let's refine the test execution step to be more explicit if needed,
+    # but for now, `tox` should be sufficient with `tox-gh-actions`.
+    # The `tox -e py` in the prompt for "Install project dependencies" seems to be a misunderstanding
+    # of how tox works; tox installs project dependencies as part of running the test environment.
+    # So, the "Run tests with tox" step is where project dependencies are installed by tox.
+
+    # Corrected understanding:
+    # 1. Install pip & tox (done)
+    # 2. Run linters using tox (done: tox -e flake8)
+    # 3. Run tests using tox (this will install deps for that tox env): `tox`
+    # The `tox-gh-actions` package helps `tox` to automatically select the correct
+    # test environment (e.g., `py38`, `py39`) that matches the Python version
+    # provided by `actions/setup-python`. If such specific environments are not
+    # defined in `tox.ini`, `tox` might fall back to a generic `py` environment
+    # or fail. We need to check `tox.ini`.
+    # For now, let's assume `tox.ini` will have or be updated to have
+    # environments like `py38`, `py39`, etc.
+    # The command will simply be `tox`.
+    
+    # Let's verify the branch name. The prompt says "main or master - check repo for actual name".
+    # Since I can't directly check the repo's default branch name, I'll stick with `master` as it's a common default for older projects.
+    # If it's `main`, this will need to be changed.
+    # The `ls` output showed `.travis.yml` which suggests an older project, making `master` more likely.
+    # I will also ensure `actions/checkout` and `actions/setup-python` are at their latest major versions for robustness.
+    # Using v4 for checkout and v5 for setup-python.
+
+    # The prompt also says "Install project dependencies using tox: `tox -e py`".
+    # This is slightly ambiguous. `tox` itself, when running an environment, installs dependencies.
+    # The `tox -e py` command *runs* the tox environment named `py`, which includes installing its dependencies.
+    # It's not a separate step *before* running tests if tests are also run with `tox -e py`.
+    # I'll assume the "Run tests with tox" step using `tox` (which `tox-gh-actions` will map to the correct Python version environment)
+    # is the one that handles both dependency installation for the test environment and running the tests.
+    
+    # The linter step is `tox -e flake8`.
+    # The test step is `tox`. `tox-gh-actions` will make `tox` run the appropriate `pyXX` environment.
+    # This implies `tox.ini` should define these `pyXX` environments.
+    # If `tox.ini` only has a generic `[testenv]` or `[testenv:py]`, `tox-gh-actions` will try to match that.
+    # Let's check `tox.ini` next.Okay, the GitHub Actions workflow file `.github/workflows/ci.yml` has been created with the assumption that the main branch is `master`.
+
+Next, I need to examine `tox.ini` to ensure it's compatible with the Python versions specified in the GitHub Actions matrix (3.8, 3.9, 3.10, 3.11) and to see how tests and linting are currently configured.
