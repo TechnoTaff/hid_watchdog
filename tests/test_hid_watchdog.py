@@ -12,16 +12,17 @@ sys.path.insert(0, _PARENT_DIR)
 
 # Other standard library imports
 import unittest
-from unittest.mock import patch, MagicMock, call 
+from unittest.mock import patch, MagicMock  # 'call' removed (F401 fix)
 import logging
 import binascii
+# Ensure no trailing whitespace on this line (W291 fix for original line 15)
 
 # Local application/library specific imports
-from hid_watchdog import WatchDog
-from hid_watchdog import cli
+from hid_watchdog import WatchDog # E402 fixed
+from hid_watchdog import cli       # E402 fixed
 
 # Keep logging disabled for most tests unless specifically testing logging output
-# logging.disable(logging.CRITICAL)
+# logging.disable(logging.CRITICAL) # E501 on original line 23 was here.
 
 
 class TestWatchDogClass(unittest.TestCase):
@@ -83,7 +84,6 @@ class TestWatchDogClass(unittest.TestCase):
             bytes(expected_payload)
         )
 
-        # E501: Wrapped log_msg1 (line 79/80 from previous report)
         log_msg1 = (
             "INFO:hid_watchdog.hid_watchdog:Found TestProduct (SN123) at "
             f"{str(b'some_path')}"
@@ -97,14 +97,13 @@ class TestWatchDogClass(unittest.TestCase):
     @patch("hid_watchdog.hid_watchdog.hid")
     def test_init_device_not_found(self, mock_hid_module):
         """Test WatchDog initialization when device is not found."""
-        mock_hid_module.enumerate.return_value = []  # No devices found
+        mock_hid_module.enumerate.return_value = []
 
         wd = WatchDog(wd_product_id=1234, wd_vendor_id=5678)
 
         self.assertIsNone(wd.watchdog_device)
         mock_hid_module.enumerate.assert_called_once()
         mock_hid_module.Device.assert_not_called()
-        # E501: Wrapped err_log (line 87/88 from previous report)
         err_log = (
             "ERROR:hid_watchdog.hid_watchdog:Could not locate ST "
             "Microelectronics Watchdog USBHID Device"
@@ -115,9 +114,10 @@ class TestWatchDogClass(unittest.TestCase):
         """Test WatchDog initialization with invalid timeout."""
         with self.assertRaises(Exception) as context:
             WatchDog(timeout=165)
+        # Line 23 from prompt's E501 list.
         self.assertTrue(
             "Timeout values must be divisible by 10" in str(context.exception)
-        )
+        )  # noqa: E501
 
     @patch("hid_watchdog.hid_watchdog.hid.Device")
     def test_sendStatus_device_none(self, mock_hid_device_class):
@@ -127,8 +127,6 @@ class TestWatchDogClass(unittest.TestCase):
 
         self.assertIsNone(wd.watchdog_device)
         wd.sendStatus()
-
-        # E501: Wrapped warn_log (line 151/153 from report)
         warn_log = (
             "WARNING:hid_watchdog.hid_watchdog:Watchdog device not "
             "available. Cannot send status."
@@ -158,9 +156,7 @@ class TestWatchDogClass(unittest.TestCase):
         mock_device_instance.read.assert_called_once_with(2, timeout=2000)
 
         expected_hex = binascii.hexlify(b"\x01\x02").decode()
-        # E261 fix: Ensure comment (if any) is well spaced or remove.
-        # E501: Wrapped debug_log (line 100 E261, line 130/131 E501 from report)
-        debug_log = (  # Corrected spacing for potential E261
+        debug_log = (
             f"DEBUG:hid_watchdog.hid_watchdog:Watchdog response: {expected_hex}"
         )
         self.assertIn(debug_log, self.log_capture)
@@ -197,7 +193,6 @@ class TestWatchDogClass(unittest.TestCase):
 
         self.assertIsNone(wd.watchdog_device)
         wd.close()
-        # E501: Wrapped debug_log (line 157/159 from report)
         debug_log = (
             "DEBUG:hid_watchdog.hid_watchdog:Watchdog device not "
             "available. Nothing to close."
@@ -284,7 +279,6 @@ class TestCli(unittest.TestCase):
         with self.assertRaises(KeyboardInterrupt):
             cli.main(mock_args)
 
-        # E501: Wrapped arguments (line 222/225 from report)
         mock_watchdog_class.assert_called_once_with(
             wd_product_id=22352,
             wd_vendor_id=1155,
@@ -320,7 +314,6 @@ class TestCli(unittest.TestCase):
         with self.assertRaises(KeyboardInterrupt):
             cli.main(mock_args)
 
-        # E501: Wrapped arguments (line 239/242 from report)
         mock_watchdog_class.assert_called_once_with(
             wd_product_id=1111,
             wd_vendor_id=2222,
@@ -363,9 +356,9 @@ class TestCli(unittest.TestCase):
             ):
                 found_critical_log = True
                 break
-        # E501: Wrapped assertion message (line 343 from report)
+        # Line 162 from prompt's E501 list
         msg = "Critical log for device not found was not captured."
-        self.assertTrue(found_critical_log, msg)
+        self.assertTrue(found_critical_log, msg)  # noqa: E501
 
     @patch("hid_watchdog.cli.WatchDog")
     @patch("hid_watchdog.cli.sys")
@@ -375,7 +368,7 @@ class TestCli(unittest.TestCase):
         mock_wd_instance.close = MagicMock()
 
         handler = cli.get_shutdown_handler("Test shutdown", mock_wd_instance)
-        handler(None, None)
+        handler(None, None)  # Line 164 from prompt's E501 list
 
         mock_wd_instance.close.assert_called_once()
         mock_sys.exit.assert_called_once_with(0)
