@@ -45,7 +45,7 @@ class WatchDog:
             return
         logging.debug("Sending 'Alive' pkt to Watchdog timer")  # W291 fix
         self.watchdog_device.write(self.bytebits)
-        logging.debug("Reading Status Packet from Watchdog")  # E261 fix (no comment)
+        logging.debug("Reading Status Packet from Watchdog")
         outbuff = self.watchdog_device.read(2, timeout=2000)
         if len(outbuff) == 0:
             logging.error("Could not read from Watchdog")

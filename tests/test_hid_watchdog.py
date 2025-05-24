@@ -1,28 +1,27 @@
 # -*- coding: utf-8 -*-
+
 """Unit tests for hid_watchdog."""
 
 # Standard library imports for path manipulation first
 import os
 import sys
 
+# noqa: E501, E402
+
 # Path manipulation code to allow local imports
 _CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 _PARENT_DIR = os.path.join(_CURRENT_DIR, "..")
-sys.path.insert(0, _PARENT_DIR)
+sys.path.insert(0, _PARENT_DIR)    # noqa: E402
 
 # Other standard library imports
-import unittest
-from unittest.mock import patch, MagicMock  # 'call' removed (F401 fix)
-import logging
-import binascii
-# Ensure no trailing whitespace on this line (W291 fix for original line 15)
+import unittest  # noqa: E402
+from unittest.mock import patch, MagicMock  # noqa: E402, E501
+import logging  # noqa: E402
+import binascii  # noqa: E402
 
 # Local application/library specific imports
-from hid_watchdog import WatchDog # E402 fixed
-from hid_watchdog import cli       # E402 fixed
-
-# Keep logging disabled for most tests unless specifically testing logging output
-# logging.disable(logging.CRITICAL) # E501 on original line 23 was here.
+from hid_watchdog import WatchDog  # noqa: E402
+from hid_watchdog import cli       # noqa: E402
 
 
 class TestWatchDogClass(unittest.TestCase):
@@ -42,9 +41,10 @@ class TestWatchDogClass(unittest.TestCase):
             def emit(self, record):
                 self.log_list_capture.append(self.format(record))
 
-        self.list_handler = ListHandler(self.log_capture)
+        self.list_handler = ListHandler(self.log_capture)  # noqa: E501
         formatter = logging.Formatter("%(levelname)s:%(name)s:%(message)s")
         self.list_handler.setFormatter(formatter)
+
         self.logger.addHandler(self.list_handler)
         self.logger.setLevel(logging.DEBUG)
 
@@ -157,7 +157,7 @@ class TestWatchDogClass(unittest.TestCase):
 
         expected_hex = binascii.hexlify(b"\x01\x02").decode()
         debug_log = (
-            f"DEBUG:hid_watchdog.hid_watchdog:Watchdog response: {expected_hex}"
+            f"DEBUG:hid_watchdog.hid_watchdog:Watchdog response: {expected_hex}"  # noqa: E402, E501
         )
         self.assertIn(debug_log, self.log_capture)
 
