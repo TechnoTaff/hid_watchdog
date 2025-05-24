@@ -17,29 +17,32 @@ def get_shutdown_handler(message=None, watchdog_device=None):
     """
     Build a shutdown handler, called from the signal methods
     """
+
     def handler(signum, frame):
-        # If we want to do anything on shutdown, such as stop motors on a robot,
+        # If we want to do anything on shutdown (e.g. stop motors on a robot),
         # you can add it here.
         watchdog_device.close()
         print(message)
         exit(0)
+
     return handler
 
+
 def main(args):
-    """ Main entry point of the app """
-    logger = logging.getLogger('hid_watchdog')
-    FORMAT = '%(asctime)-15s %(filename)s %(message)s'
+    """Main entry point of the app"""
+    logger = logging.getLogger("hid_watchdog")
+    FORMAT = "%(asctime)-15s %(filename)s %(message)s"
     if args.debug:
         loglevel = logging.DEBUG
     else:
         loglevel = logging.INFO
     logger.setLevel(loglevel)
-    logging.basicConfig(format=FORMAT,level=loglevel)
-    wdstick = WatchDog(wd_product_id=args.pid,
-                       wd_vendor_id=args.vid,
-                       timeout=args.timeout)
-    signal(SIGINT, get_shutdown_handler('SIGINT received',wdstick))
-    signal(SIGTERM, get_shutdown_handler('SIGTERM received',wdstick))
+    logging.basicConfig(format=FORMAT, level=loglevel)
+    wdstick = WatchDog(
+        wd_product_id=args.pid, wd_vendor_id=args.vid, timeout=args.timeout
+    )
+    signal(SIGINT, get_shutdown_handler("SIGINT received", wdstick))
+    signal(SIGTERM, get_shutdown_handler("SIGTERM received", wdstick))
     if not wdstick.watchdog_device:
         logger.critical("Watchdog device not found. Exiting.")
         sys.exit(1)
@@ -49,24 +52,28 @@ def main(args):
 
 
 if __name__ == "__main__":
-    """ This is executed when run from the command line """
+    """This is executed when run from the command line"""
     parser = argparse.ArgumentParser()
 
     # Optional argument which requires a parameter (eg. -d test)
-    parser.add_argument("-p",
-                        "--pid",
-                        type=int,
-                        action="store",
-                        dest="pid",
-                        default=22352,
-                        help='product_id (default: 22352)')
-    parser.add_argument("-v",
-                        "--vid",
-                        type=int,
-                        action="store",
-                        dest="vid",
-                        default=1155,
-                        help='vendor_id (default: 1155)')
+    parser.add_argument(
+        "-p",
+        "--pid",
+        type=int,
+        action="store",
+        dest="pid",
+        default=22352,
+        help="product_id (default: 22352)",
+    )
+    parser.add_argument(
+        "-v",
+        "--vid",
+        type=int,
+        action="store",
+        dest="vid",
+        default=1155,
+        help="vendor_id (default: 1155)",
+    )
     parser.add_argument(
         "-t",
         "--timeout",
@@ -74,7 +81,8 @@ if __name__ == "__main__":
         action="store",
         dest="timeout",
         default=160,
-        help="Timeout Value before reboot is forced (Default 160 seconds)")
+        help="Timeout Value before reboot is forced (Default 160 seconds)",
+    )
 
     parser.add_argument(
         "-f",
@@ -83,22 +91,19 @@ if __name__ == "__main__":
         action="store",
         dest="frequency",
         default=9,
-        help="Frequency to update Watchdog timer"
+        help="Frequency to update Watchdog timer",
     )
 
     # Specify output of "--version"
     parser.add_argument(
         "--version",
         action="version",
-        version="%(prog)s (version {version})".format(version=__version__))
-
-    parser.add_argument(
-        '--debug',
-        action='store_true', 
-        help='print debug messages to stderr'
+        version="%(prog)s (version {version})".format(version=__version__),
     )
 
+    parser.add_argument(
+        "--debug", action="store_true", help="print debug messages to stderr"
+    )
 
     args = parser.parse_args()
     main(args)
-
