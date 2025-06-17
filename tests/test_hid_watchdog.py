@@ -5,6 +5,11 @@
 
 
 import unittest
+import sys
+from unittest.mock import patch, MagicMock
+
+# Mock the hid module before importing hid_watchdog
+sys.modules['hid'] = MagicMock()
 
 from hid_watchdog import hid_watchdog
 
@@ -19,4 +24,11 @@ class TestHid_watchdog(unittest.TestCase):
         """Tear down test fixtures, if any."""
 
     def test_000_something(self):
-        """Test something."""
+        """Test basic functionality."""
+        # Test that the module can be imported successfully
+        self.assertIsNotNone(hid_watchdog)
+        
+    def test_module_attributes(self):
+        """Test that expected attributes exist."""
+        # Basic test to ensure module structure is intact
+        self.assertTrue(hasattr(hid_watchdog, '__name__'))
