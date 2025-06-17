@@ -4,6 +4,8 @@ This is a simple service to communicate with cheap USB WatchDog timers that crea
 
 ![USB HID "v5" Watchdog Timer](docs/usb-hid-watchdog-v5.jpg)
 
+Please use with caution as it's not well tested!
+
 ## Install
 
 ### Installation on Ubuntu
@@ -11,11 +13,10 @@ This is a simple service to communicate with cheap USB WatchDog timers that crea
 Create your VirtualEnv, activate it.
 
 ```
-$ pip install -r requirements.txt 
+$ pip install -r requirements.txt
 ```
-This will install the `hidapi` Python package and any other necessary dependencies listed in `requirements.txt`.
 
-You will still need to install the underlying C library on your operating system for `hidapi` to interface with the USB-HID device:
+You will need to install a library on your operating system to interface with the USB-HID device:
 
 ```
 apt install libhidapi-hidraw0

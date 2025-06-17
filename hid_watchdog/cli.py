@@ -40,12 +40,10 @@ def main(args):
                        timeout=args.timeout)
     signal(SIGINT, get_shutdown_handler('SIGINT received',wdstick))
     signal(SIGTERM, get_shutdown_handler('SIGTERM received',wdstick))
-    if not wdstick.watchdog_device:
-        logger.critical("Watchdog device not found. Exiting.")
-        sys.exit(1)
-    while True:
-        wdstick.sendStatus()
-        sleep(args.frequency)
+    if wdstick.watchdog_device:
+        while True:
+            wdstick.sendStatus()
+            sleep(args.frequency)
 
 
 if __name__ == "__main__":
