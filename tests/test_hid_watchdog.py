@@ -1,179 +1,139 @@
-# -*- coding: utf-8 -*-
-
-"""Unit tests for hid_watchdog."""
-
-# Standard library imports for path manipulation first
-import os
+import unittest
+from unittest.mock import patch, MagicMock, call, mock_open
+import logging
 import sys
+import os
+import binascii
 
-# noqa: E501, E402
+# Add the parent directory to sys.path to allow imports from hid_watchdog module
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Path manipulation code to allow local imports
-_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-_PARENT_DIR = os.path.join(_CURRENT_DIR, "..")
-sys.path.insert(0, _PARENT_DIR)    # noqa: E402
+from hid_watchdog import WatchDog
+from hid_watchdog import cli
 
-# Other standard library imports
-import unittest  # noqa: E402
-from unittest.mock import patch, MagicMock  # noqa: E402, E501
-import logging  # noqa: E402
-import binascii  # noqa: E402
-
-# Local application/library specific imports
-from hid_watchdog import WatchDog  # noqa: E402
-from hid_watchdog import cli       # noqa: E402
-
+# Keep logging disabled for most tests, enable for specific logging tests if necessary
+# logging.disable(logging.CRITICAL)
 
 class TestWatchDogClass(unittest.TestCase):
-    """Test cases for the WatchDog class."""
 
     def setUp(self):
-        """Set up test fixtures, including log capture."""
-        logging.disable(logging.NOTSET)  # Enable logging for capture
-        self.logger = logging.getLogger("hid_watchdog.hid_watchdog")
+        # Reset logging level for each test to capture logs
+        logging.disable(logging.NOTSET)
+        # Create a logger instance to capture log messages
+        self.logger = logging.getLogger('hid_watchdog.hid_watchdog') # Target the logger used in WatchDog
         self.log_capture = []
 
+        # Custom handler to capture log records
         class ListHandler(logging.Handler):
-            def __init__(self, log_list_capture):
+            def __init__(self, log_list):
                 super().__init__()
-                self.log_list_capture = log_list_capture
-
+                self.log_list = log_list
             def emit(self, record):
-                self.log_list_capture.append(self.format(record))
-
-        self.list_handler = ListHandler(self.log_capture)  # noqa: E501
-        formatter = logging.Formatter("%(levelname)s:%(name)s:%(message)s")
+                self.log_list.append(self.format(record))
+        
+        self.list_handler = ListHandler(self.log_capture)
+        # Use a basic formatter, or match the application's formatter if important
+        formatter = logging.Formatter('%(levelname)s:%(name)s:%(message)s') 
         self.list_handler.setFormatter(formatter)
-
         self.logger.addHandler(self.list_handler)
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.DEBUG) # Capture all levels from DEBUG upwards
 
     def tearDown(self):
-        """Tear down test fixtures."""
+        # Clean up the handler and disable logging again if needed
         self.logger.removeHandler(self.list_handler)
-        # logging.disable(logging.CRITICAL)
+        # logging.disable(logging.CRITICAL) # Or whatever default state you want
+        self.log_capture = []
 
-    @patch("hid_watchdog.hid_watchdog.hid")
+
+    @patch('hid_watchdog.hid_watchdog.hid')
     def test_init_successful(self, mock_hid_module):
-        """Test WatchDog successful initialization."""
         mock_device_instance = MagicMock()
         mock_device_instance.product = "TestProduct"
         mock_device_instance.write = MagicMock()
         mock_device_instance.read = MagicMock()
         mock_device_instance.close = MagicMock()
 
-        mock_hid_module.enumerate.return_value = [
-            {
-                "product_id": 1234,
-                "vendor_id": 5678,
-                "path": b"some_path",
-                "serial_number": "SN123",
-            }
-        ]
+        mock_hid_module.enumerate.return_value = [{
+            'product_id': 1234,
+            'vendor_id': 5678,
+            'path': b'some_path',
+            'serial_number': 'SN123'
+        }]
         mock_hid_module.Device.return_value = mock_device_instance
 
         wd = WatchDog(wd_product_id=1234, wd_vendor_id=5678, timeout=160)
 
         self.assertIsNotNone(wd.watchdog_device)
         mock_hid_module.enumerate.assert_called_once()
-        mock_hid_module.Device.assert_called_once_with(path=b"some_path")
-
+        mock_hid_module.Device.assert_called_once_with(path=b'some_path')
+        
         expected_payload = bytearray(64)
         expected_payload[0] = int((160 / 10) + 12)
-        mock_device_instance.write.assert_called_once_with(
-            bytes(expected_payload)
-        )
+        mock_device_instance.write.assert_called_once_with(bytes(expected_payload))
+        
+        # Check log messages
+        # Need to enable logging capture for this
+        self.assertIn(f'INFO:hid_watchdog.hid_watchdog:Found TestProduct (SN123) at {str(b"some_path")}', self.log_capture)
+        self.assertIn('INFO:hid_watchdog.hid_watchdog:Watchdog set to 160 seconds.', self.log_capture)
 
-        log_msg1 = (
-            "INFO:hid_watchdog.hid_watchdog:Found TestProduct (SN123) at "
-            f"{str(b'some_path')}"
-        )
-        self.assertIn(log_msg1, self.log_capture)
-        log_msg_set = (
-            "INFO:hid_watchdog.hid_watchdog:Watchdog set to 160 seconds."
-        )
-        self.assertIn(log_msg_set, self.log_capture)
 
-    @patch("hid_watchdog.hid_watchdog.hid")
+    @patch('hid_watchdog.hid_watchdog.hid')
     def test_init_device_not_found(self, mock_hid_module):
-        """Test WatchDog initialization when device is not found."""
-        mock_hid_module.enumerate.return_value = []
+        mock_hid_module.enumerate.return_value = [] # No devices found
 
         wd = WatchDog(wd_product_id=1234, wd_vendor_id=5678)
 
         self.assertIsNone(wd.watchdog_device)
         mock_hid_module.enumerate.assert_called_once()
         mock_hid_module.Device.assert_not_called()
-        err_log = (
-            "ERROR:hid_watchdog.hid_watchdog:Could not locate ST "
-            "Microelectronics Watchdog USBHID Device"
-        )
-        self.assertIn(err_log, self.log_capture)
+        self.assertIn('ERROR:hid_watchdog.hid_watchdog:Could not locate ST Microelectronics Watchdog USBHID Device', self.log_capture)
 
     def test_init_invalid_timeout(self):
-        """Test WatchDog initialization with invalid timeout."""
         with self.assertRaises(Exception) as context:
             WatchDog(timeout=165)
-        # Line 23 from prompt's E501 list.
-        self.assertTrue(
-            "Timeout values must be divisible by 10" in str(context.exception)
-        )  # noqa: E501
+        self.assertTrue('Timeout values must be divisible by 10' in str(context.exception))
 
-    @patch("hid_watchdog.hid_watchdog.hid.Device")
+    @patch('hid_watchdog.hid_watchdog.hid.Device') # Mock Device directly for sendStatus
     def test_sendStatus_device_none(self, mock_hid_device_class):
-        """Test sendStatus when WatchDog device is not initialized."""
-        with patch("hid_watchdog.hid_watchdog.hid.enumerate", return_value=[]):
+        # First, initialize WatchDog so that self.watchdog_device is None
+        with patch('hid_watchdog.hid_watchdog.hid.enumerate', return_value=[]):
             wd = WatchDog()
+        
+        self.assertIsNone(wd.watchdog_device) # Ensure device is None
+        wd.sendStatus() # Call sendStatus
 
-        self.assertIsNone(wd.watchdog_device)
-        wd.sendStatus()
-        warn_log = (
-            "WARNING:hid_watchdog.hid_watchdog:Watchdog device not "
-            "available. Cannot send status."
-        )
-        self.assertIn(warn_log, self.log_capture)
+        # Verify warning log
+        self.assertIn("WARNING:hid_watchdog.hid_watchdog:Watchdog device not available. Cannot send status.", self.log_capture)
 
-    @patch("hid_watchdog.hid_watchdog.hid.enumerate")
-    @patch("hid_watchdog.hid_watchdog.hid.Device")
-    def test_sendStatus_successful(
-        self, mock_device_constructor, mock_enumerate
-    ):
-        """Test successful sendStatus call."""
+
+    @patch('hid_watchdog.hid_watchdog.hid.enumerate')
+    @patch('hid_watchdog.hid_watchdog.hid.Device')
+    def test_sendStatus_successful(self, mock_device_constructor, mock_enumerate):
         mock_device_instance = MagicMock()
         mock_device_instance.write = MagicMock()
-        mock_device_instance.read = MagicMock(return_value=b"\x01\x02")
+        mock_device_instance.read = MagicMock(return_value=b'\x01\x02') # Sample 2-byte buffer
 
-        mock_enumerate.return_value = [
-            {"product_id": 1, "vendor_id": 1, "path": b"path"}
-        ]
+        mock_enumerate.return_value = [{'product_id': 1, 'vendor_id': 1, 'path': b'path'}]
         mock_device_constructor.return_value = mock_device_instance
-
+        
         wd = WatchDog(wd_product_id=1, wd_vendor_id=1, timeout=10)
         wd.sendStatus()
 
-        mock_device_instance.write.assert_called_with(wd.bytebits)
+        mock_device_instance.write.assert_called_with(wd.bytebits) # called once in init, once in sendStatus
         self.assertEqual(mock_device_instance.write.call_count, 2)
         mock_device_instance.read.assert_called_once_with(2, timeout=2000)
+        
+        expected_hex = binascii.hexlify(b'\x01\x02').decode()
+        self.assertIn(f"DEBUG:hid_watchdog.hid_watchdog:Watchdog response: {expected_hex}", self.log_capture)
 
-        expected_hex = binascii.hexlify(b"\x01\x02").decode()
-        debug_log = (
-            f"DEBUG:hid_watchdog.hid_watchdog:Watchdog response: {expected_hex}"  # noqa: E402, E501
-        )
-        self.assertIn(debug_log, self.log_capture)
-
-    @patch("hid_watchdog.hid_watchdog.hid.enumerate")
-    @patch("hid_watchdog.hid_watchdog.hid.Device")
-    def test_sendStatus_read_failure(
-        self, mock_device_constructor, mock_enumerate
-    ):
-        """Test sendStatus with a read failure."""
+    @patch('hid_watchdog.hid_watchdog.hid.enumerate')
+    @patch('hid_watchdog.hid_watchdog.hid.Device')
+    def test_sendStatus_read_failure(self, mock_device_constructor, mock_enumerate):
         mock_device_instance = MagicMock()
         mock_device_instance.write = MagicMock()
-        mock_device_instance.read = MagicMock(return_value=b"")
+        mock_device_instance.read = MagicMock(return_value=b'') # Empty buffer
 
-        mock_enumerate.return_value = [
-            {"product_id": 1, "vendor_id": 1, "path": b"path"}
-        ]
+        mock_enumerate.return_value = [{'product_id': 1, 'vendor_id': 1, 'path': b'path'}]
         mock_device_constructor.return_value = mock_device_instance
 
         wd = WatchDog(wd_product_id=1, wd_vendor_id=1, timeout=10)
@@ -181,91 +141,73 @@ class TestWatchDogClass(unittest.TestCase):
 
         mock_device_instance.write.assert_called_with(wd.bytebits)
         mock_device_instance.read.assert_called_once_with(2, timeout=2000)
-        self.assertIn(
-            "ERROR:hid_watchdog.hid_watchdog:Could not read from Watchdog",
-            self.log_capture,
-        )
+        self.assertIn("ERROR:hid_watchdog.hid_watchdog:Could not read from Watchdog", self.log_capture)
+
 
     def test_close_device_none(self):
-        """Test close when WatchDog device is not initialized."""
-        with patch("hid_watchdog.hid_watchdog.hid.enumerate", return_value=[]):
+        with patch('hid_watchdog.hid_watchdog.hid.enumerate', return_value=[]):
             wd = WatchDog()
-
+        
         self.assertIsNone(wd.watchdog_device)
         wd.close()
-        debug_log = (
-            "DEBUG:hid_watchdog.hid_watchdog:Watchdog device not "
-            "available. Nothing to close."
-        )
-        self.assertIn(debug_log, self.log_capture)
+        self.assertIn("DEBUG:hid_watchdog.hid_watchdog:Watchdog device not available. Nothing to close.", self.log_capture)
 
-    @patch("hid_watchdog.hid_watchdog.hid.enumerate")
-    @patch("hid_watchdog.hid_watchdog.hid.Device")
+
+    @patch('hid_watchdog.hid_watchdog.hid.enumerate')
+    @patch('hid_watchdog.hid_watchdog.hid.Device')
     def test_close_successful(self, mock_device_constructor, mock_enumerate):
-        """Test successful close call."""
         mock_device_instance = MagicMock()
         mock_device_instance.close = MagicMock()
 
-        mock_enumerate.return_value = [
-            {"product_id": 1, "vendor_id": 1, "path": b"path"}
-        ]
+        mock_enumerate.return_value = [{'product_id': 1, 'vendor_id': 1, 'path': b'path'}]
         mock_device_constructor.return_value = mock_device_instance
 
         wd = WatchDog(wd_product_id=1, wd_vendor_id=1, timeout=10)
         wd.close()
 
         mock_device_instance.close.assert_called_once()
-        self.assertIn(
-            "WARNING:hid_watchdog.hid_watchdog:Closing Watchdog device",
-            self.log_capture,
-        )
+        self.assertIn("WARNING:hid_watchdog.hid_watchdog:Closing Watchdog device", self.log_capture)
 
 
 class TestCli(unittest.TestCase):
-    """Test cases for the CLI functionality."""
-
     def setUp(self):
-        """Set up test fixtures for CLI tests."""
-        self.logger = logging.getLogger("hid_watchdog")
+        self.logger = logging.getLogger('hid_watchdog') # Target the CLI logger
         self.log_capture = []
-
+        
         class ListHandler(logging.Handler):
-            def __init__(self, log_list_capture):
+            def __init__(self, log_list):
                 super().__init__()
-                self.log_list_capture = log_list_capture
-
+                self.log_list = log_list
             def emit(self, record):
-                self.log_list_capture.append(self.format(record))
-
+                self.log_list.append(self.format(record))
+        
         self.list_handler = ListHandler(self.log_capture)
-        formatter = logging.Formatter(
-            "%(asctime)-15s %(filename)s %(message)s"
-        )
+        formatter = logging.Formatter('%(asctime)-15s %(filename)s %(message)s') # Match CLI format
         self.list_handler.setFormatter(formatter)
         self.logger.addHandler(self.list_handler)
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.DEBUG) # Capture all levels
 
-        self.patch_sys_exit = patch("sys.exit")
+        # Patch sys.exit to prevent tests from exiting
+        self.patch_sys_exit = patch('sys.exit')
         self.mock_sys_exit = self.patch_sys_exit.start()
 
     def tearDown(self):
-        """Tear down test fixtures for CLI tests."""
         self.logger.removeHandler(self.list_handler)
         self.patch_sys_exit.stop()
         self.log_capture = []
 
-    @patch("hid_watchdog.cli.WatchDog")
-    @patch("hid_watchdog.cli.sleep")
-    @patch("argparse.ArgumentParser.parse_args")
-    def test_main_default_args(
-        self, mock_parse_args, mock_sleep, mock_watchdog_class
-    ):
-        """Test CLI main function with default arguments."""
+
+    @patch('hid_watchdog.cli.WatchDog')
+    @patch('hid_watchdog.cli.sleep')
+    @patch('argparse.ArgumentParser.parse_args')
+    def test_main_default_args(self, mock_parse_args, mock_sleep, mock_watchdog_class):
+        # Mock WatchDog instance and its watchdog_device attribute
         mock_wd_instance = MagicMock()
-        mock_wd_instance.watchdog_device = True
+        mock_wd_instance.watchdog_device = True # Simulate device found
         mock_wd_instance.sendStatus = MagicMock()
         mock_watchdog_class.return_value = mock_wd_instance
 
+        # Mock parsed arguments
         mock_args = MagicMock()
         mock_args.pid = 22352
         mock_args.vid = 1155
@@ -273,27 +215,22 @@ class TestCli(unittest.TestCase):
         mock_args.frequency = 9
         mock_args.debug = False
         mock_parse_args.return_value = mock_args
+        
+        # Mock sleep to break the loop after a few iterations
+        mock_sleep.side_effect = [None, None, KeyboardInterrupt] # Raise exception to stop infinite loop
 
-        mock_sleep.side_effect = [None, None, KeyboardInterrupt]
+        with self.assertRaises(KeyboardInterrupt): # Expect loop to be broken by mock_sleep
+             cli.main(mock_args)
 
-        with self.assertRaises(KeyboardInterrupt):
-            cli.main(mock_args)
-
-        mock_watchdog_class.assert_called_once_with(
-            wd_product_id=22352,
-            wd_vendor_id=1155,
-            timeout=160
-        )
-        self.assertTrue(mock_wd_instance.sendStatus.call_count > 0)
+        mock_watchdog_class.assert_called_once_with(wd_product_id=22352, wd_vendor_id=1155, timeout=160)
+        self.assertTrue(mock_wd_instance.sendStatus.call_count > 0) # Check if called at least once
         mock_sleep.assert_any_call(9)
 
-    @patch("hid_watchdog.cli.WatchDog")
-    @patch("hid_watchdog.cli.sleep")
-    @patch("argparse.ArgumentParser.parse_args")
-    def test_main_custom_args_debug(
-        self, mock_parse_args, mock_sleep, mock_watchdog_class
-    ):
-        """Test CLI main function with custom arguments and debug flag."""
+
+    @patch('hid_watchdog.cli.WatchDog')
+    @patch('hid_watchdog.cli.sleep')
+    @patch('argparse.ArgumentParser.parse_args')
+    def test_main_custom_args_debug(self, mock_parse_args, mock_sleep, mock_watchdog_class):
         mock_wd_instance = MagicMock()
         mock_wd_instance.watchdog_device = True
         mock_wd_instance.sendStatus = MagicMock()
@@ -306,31 +243,34 @@ class TestCli(unittest.TestCase):
         mock_args.frequency = 5
         mock_args.debug = True
         mock_parse_args.return_value = mock_args
+        
+        mock_sleep.side_effect = [KeyboardInterrupt] 
 
-        mock_sleep.side_effect = [KeyboardInterrupt]
-
-        cli_logger = logging.getLogger("hid_watchdog")
+        # Check logging level configuration
+        # We need to get the logger instance that cli.main configures
+        cli_logger = logging.getLogger('hid_watchdog') # This is the parent logger name used in cli.py
 
         with self.assertRaises(KeyboardInterrupt):
             cli.main(mock_args)
 
-        mock_watchdog_class.assert_called_once_with(
-            wd_product_id=1111,
-            wd_vendor_id=2222,
-            timeout=60
-        )
+        mock_watchdog_class.assert_called_once_with(wd_product_id=1111, wd_vendor_id=2222, timeout=60)
         mock_sleep.assert_called_once_with(5)
+        
+        # Verify logging level was set to DEBUG
         self.assertEqual(cli_logger.getEffectiveLevel(), logging.DEBUG)
+        # And that basicConfig was called (indirectly check via a log message if possible, or by checking handlers)
+        # This part is a bit tricky as basicConfig is global.
+        # We can check if our handler is still there and if a debug message was logged.
+        # For example, if WatchDog logged something at DEBUG level and it was captured.
+        # Or check the log_capture for the format.
+        # For simplicity, we assume if level is DEBUG, basicConfig was likely called with it.
 
-    @patch("hid_watchdog.cli.WatchDog")
-    @patch("hid_watchdog.cli.sleep")
-    @patch("argparse.ArgumentParser.parse_args")
-    def test_main_device_init_failure(
-        self, mock_parse_args, mock_sleep, mock_watchdog_class
-    ):
-        """Test CLI main function when WatchDog device initialization fails."""
+    @patch('hid_watchdog.cli.WatchDog')
+    @patch('hid_watchdog.cli.sleep') # Still need to mock sleep
+    @patch('argparse.ArgumentParser.parse_args')
+    def test_main_device_init_failure(self, mock_parse_args, mock_sleep, mock_watchdog_class):
         mock_wd_instance = MagicMock()
-        mock_wd_instance.watchdog_device = None
+        mock_wd_instance.watchdog_device = None # Simulate device NOT found
         mock_watchdog_class.return_value = mock_wd_instance
 
         mock_args = MagicMock()
@@ -341,39 +281,49 @@ class TestCli(unittest.TestCase):
         mock_args.debug = False
         mock_parse_args.return_value = mock_args
 
-        cli.main(mock_args)
+        cli.main(mock_args) # Should not loop, should exit
 
-        mock_watchdog_class.assert_called_once_with(
-            wd_product_id=123, wd_vendor_id=456, timeout=100
-        )
+        mock_watchdog_class.assert_called_once_with(wd_product_id=123, wd_vendor_id=456, timeout=100)
         self.mock_sys_exit.assert_called_once_with(1)
-
+        
+        # Check for critical log message
+        # Note: The logger in cli.py is 'hid_watchdog', not 'hid_watchdog.cli'
+        # We need to adjust self.logger in setUp for TestCli or add another handler for 'hid_watchdog'
+        # For now, let's assume the existing log capture might catch it if propagation is on.
+        # A more robust way is to specifically target the 'hid_watchdog' logger.
+        
+        # Re-checking the logging setup for TestCli:
+        # self.logger = logging.getLogger('hid_watchdog') # Correctly targets the parent logger
+        
+        # Check if the critical message was logged
         found_critical_log = False
         for record_str in self.log_capture:
-            if (
-                "CRITICAL" in record_str
-                and "Watchdog device not found. Exiting." in record_str
-            ):
+            if "CRITICAL" in record_str and "Watchdog device not found. Exiting." in record_str:
                 found_critical_log = True
                 break
-        # Line 162 from prompt's E501 list
-        msg = "Critical log for device not found was not captured."
-        self.assertTrue(found_critical_log, msg)  # noqa: E501
+        self.assertTrue(found_critical_log, "Critical log for device not found was not captured.")
 
-    @patch("hid_watchdog.cli.WatchDog")
-    @patch("hid_watchdog.cli.sys")
+    @patch('hid_watchdog.cli.WatchDog') # Mock WatchDog
+    @patch('hid_watchdog.cli.sys') # Mock sys to check sys.exit
     def test_get_shutdown_handler(self, mock_sys, mock_watchdog_class):
-        """Test the shutdown handler function."""
         mock_wd_instance = MagicMock()
         mock_wd_instance.close = MagicMock()
-
+        
+        # Get the handler function
         handler = cli.get_shutdown_handler("Test shutdown", mock_wd_instance)
-        handler(None, None)  # Line 164 from prompt's E501 list
-
+        
+        # Call the handler as if a signal was received
+        handler(None, None) # signum and frame are not used by this handler
+        
         mock_wd_instance.close.assert_called_once()
+        # print is harder to mock if not injected. If it were logging, it'd be easier.
+        # For now, we assume if close is called, the handler works.
+        # To test print, you might patch 'builtins.print'
         mock_sys.exit.assert_called_once_with(0)
 
 
-if __name__ == "__main__":
-    logging.disable(logging.CRITICAL)
+if __name__ == '__main__':
+    # Disable all logging for tests run via __main__, except when testing logging itself.
+    # Individual test methods or setUp can re-enable or capture logs.
+    logging.disable(logging.CRITICAL) 
     unittest.main()
