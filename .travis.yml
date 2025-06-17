@@ -1,0 +1,19 @@
+language: python
+python:
+- 3.8
+- 3.7
+- 3.6
+before_install:
+- sudo apt-get install -y libhidapi-hidraw0
+install: pip install -U tox-travis
+script: tox
+deploy:
+  provider: pypi
+  distributions: sdist bdist_wheel
+  user: "__token__"
+  password:
+    secure: pmUpZcpDm0+6xhR15u+fXE2I9cD0lq3IV553vWQjiTZQlB8FtQogdnDjMdNOPY703ZqQuR57O335CPfCakP8zy+IpduVlg52tgVVdIez1NBpc8GF8PbV2DWaf9AJFX2yZ33cMOU5G4I8uNambt11+j4N7vaC2+20ZCGcR2aDaR0hXpGypQAHGSJY+9JoQ4p1XqL73dN4Uae+VgCnlfIz/+JFffrvRmEvU9hO7Jfs+omhGmYrHB2P6UVdv9Cf8l4ihtUfxaZOdnaZDR7cCtCPBaxYv0p/uQADQk0gAzqQeZpPG3Xmf5A0FwXkr9/m18ZZzmDWK64zQn/Pr+nvJjLIDK3qwf17Z9Qmj+hRsX5nJIYtYfEkj6UEQj+Mj0V6TZRNg3OMpHDxEsLXbFwJucdsDmktdJ2/WTdEn6KsJXdiO3qlWVXS2J8NTDDiFZD7mHFUZlzmNBvJkV/a3fsnpmuHh1xYaBg1ATKVNRDD2/NJn143lNVM6utBUmHnm+fAhr7/hwphiqyOCkMfnn53jIL1CBioO05OYXjkS8WK4pQxlu5fs5slWzVyIZWDD/Xiyf5F76rnCKY6djmLczLMzZgyskpjqlpSi9SRpB3evLrOi9i2A3kRqfY0nRSRGuPxm6k1FHXKLtndD+cuGpGkHl77RYvbkgbKPl+YW3zQnvBIuXU=
+  on:
+    tags: true
+    repo: TechnoTaff/hid_watchdog
+    python: 3.7
