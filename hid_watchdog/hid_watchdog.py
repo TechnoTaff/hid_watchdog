@@ -5,6 +5,7 @@ from ctypes import create_string_buffer
 import logging
 import hid
 
+
 class WatchDog:
     def __init__(self, wd_product_id=22352, wd_vendor_id=1155, timeout=160):
         if timeout % 10 != 0:
@@ -23,7 +24,10 @@ class WatchDog:
             return
         if hid_dev:
             self.watchdog_device = hid.Device(path=hid_dev['path'])
-            logging.info(f'Found {self.watchdog_device.product} ({str(hid_dev["serial_number"])}) at {str(hid_dev["path"])}')
+            product = self.watchdog_device.product
+            serial = str(hid_dev["serial_number"])
+            path = str(hid_dev["path"])
+            logging.info(f'Found {product} ({serial}) at {path}')
             self.watchdog_device.write(self.bytebits)
             logging.info(f'Watchdog set to {timeout} seconds.')
 
@@ -34,7 +38,8 @@ class WatchDog:
         outbuff = self.watchdog_device.read(2, timeout=2000)
         if len(outbuff) == 0:
             print('Could not read from Watchdog')
-        #print(binascii.hexlify(bytearray(self.watchdog_device.read(2,timeout=2000))))
+        # print(binascii.hexlify(bytearray(
+        #     self.watchdog_device.read(2, timeout=2000))))
 
     def close(self):
         logging.warning('Closing Watchdog device')

@@ -10,7 +10,6 @@ import logging
 from hid_watchdog import WatchDog
 from signal import signal, SIGINT, SIGTERM
 from time import sleep
-import sys
 
 
 def get_shutdown_handler(message=None, watchdog_device=None):
@@ -18,12 +17,13 @@ def get_shutdown_handler(message=None, watchdog_device=None):
     Build a shutdown handler, called from the signal methods
     """
     def handler(signum, frame):
-        # If we want to do anything on shutdown, such as stop motors on a robot,
-        # you can add it here.
+        # If we want to do anything on shutdown, such as stop motors
+        # on a robot, you can add it here.
         watchdog_device.close()
         print(message)
         exit(0)
     return handler
+
 
 def main(args):
     """ Main entry point of the app """
@@ -34,12 +34,12 @@ def main(args):
     else:
         loglevel = logging.INFO
     logger.setLevel(loglevel)
-    logging.basicConfig(format=FORMAT,level=loglevel)
+    logging.basicConfig(format=FORMAT, level=loglevel)
     wdstick = WatchDog(wd_product_id=args.pid,
                        wd_vendor_id=args.vid,
                        timeout=args.timeout)
-    signal(SIGINT, get_shutdown_handler('SIGINT received',wdstick))
-    signal(SIGTERM, get_shutdown_handler('SIGTERM received',wdstick))
+    signal(SIGINT, get_shutdown_handler('SIGINT received', wdstick))
+    signal(SIGTERM, get_shutdown_handler('SIGTERM received', wdstick))
     if wdstick.watchdog_device:
         while True:
             wdstick.sendStatus()
@@ -92,11 +92,9 @@ if __name__ == "__main__":
 
     parser.add_argument(
         '--debug',
-        action='store_true', 
+        action='store_true',
         help='print debug messages to stderr'
     )
 
-
     args = parser.parse_args()
     main(args)
-
